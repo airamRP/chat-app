@@ -7,26 +7,38 @@ const socket = io("https://chat-api-ia35.onrender.com"); // Conecta Render
 function App() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
+  const [nickname, setNickname] = useState("");
+  const [isConnected, setIsConnected] = useState(false);
   // Guarda el ID del socket local
-  const [myId, setMyId] = useState("")
+  // const [myId, setMyId] = useState("")
+
+  
 
   // Conectar al WebSocket y escuchar mensajes
   useEffect(() => {
-    socket.on("connect", () => {
-      console.log("Conectado al servidor:", socket.id);
-      setMyId(socket.id) // Almacenar el ID del socket al conectar
-    });
+    if (isConnected) {
+      socket.on("connect", () => {
+        console.log("Conectado al servidor:", socket.id);
+      });
 
-    socket.on("message", (msg) => {
-      setMessages((prevMessages) => [...prevMessages, msg]);
-    });
+      socket.on("message", (msg) => {
+        setMessages((prevMessages) => [...prevMessages, msg]);
+      });
 
-    // Limpiar al desmontar
-    return () => {
-      socket.off("message");
-      socket.off("connect");
-    };
-  }, []);
+      return () => {
+        socket.off("message");
+        socket.off("connect");
+      };
+    }
+  }, [isConnected]);
+
+  const handleNicknameSubmit = (e) => {
+    e.preventDefault();
+    if (nickname.trim()) {
+      socket.emit("setNickname", nickname); // Enviar el nickname al servidor
+      setIsConnected(true); // Mostrar el chat una vez que se establece el nickname
+    }
+  };
 
   // Enviar mensaje
   const sendMessage = () => {
@@ -35,6 +47,25 @@ function App() {
       setInput(""); // Limpia el input
     }
   };
+
+  if (!isConnected) {
+    return (
+      <div style={{ padding: "20px" }}>
+        <h1>Bienvenido al Chat</h1>
+        <form onSubmit={handleNicknameSubmit}>
+          <input
+            type="text"
+            value={nickname}
+            onChange={(e) => setNickname(e.target.value)}
+            placeholder="Ingresa tu nickname"
+            style={{ width: "70%", marginRight: "10px" }}
+          />
+          <button type="submit">Entrar</button>
+        </form>
+      </div>
+    );
+  }
+
 
   return (
     <div style={{ padding: "20px" }}>
@@ -50,7 +81,7 @@ function App() {
       >
         {messages.map((msg, index) => (
           <p key={index}>
-            {msg.senderId === myId ? "Tú": "Otro"}: {msg.text} - {msg.timestamp}
+            {msg.nickname}: {msg.text} - {msg.timestamp}
           </p>
         ))}
       </div>
